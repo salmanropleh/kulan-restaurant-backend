@@ -32,6 +32,7 @@ INSTALLED_APPS = [
 'users',
 'menu',
 'orders',
+'orderprocess',  # ADD THIS LINE
 'reservations',
 'contact',
 'analytics',

@@ -38,6 +38,7 @@ urlpatterns = [
    path('api/users/', include('users.urls')),
    path('api/menu/', include('menu.urls')),
    path('api/orders/', include('orders.urls')),
+   path('api/orderprocess/', include('orderprocess.urls')),  # ADD THIS LINE
    path('api/reservations/', include('reservations.urls')),
    path('api/contact/', include('contact.urls')),
 
