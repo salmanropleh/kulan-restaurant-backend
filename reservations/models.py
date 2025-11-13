@@ -1,3 +1,4 @@
+# reservations\models.py
 from django.db import models
 from django.core.validators import MinValueValidator, MaxValueValidator
 from django.utils import timezone
@@ -36,7 +37,14 @@ class Reservation(models.Model):
     
     def is_past_due(self):
         """Check if reservation date/time has passed"""
-        reservation_datetime = timezone.make_aware(
-            timezone.datetime.combine(self.reservation_date, self.reservation_time)
-        )
+        from django.utils import timezone
+        from datetime import datetime
+        
+        # Combine date and time into a datetime object
+        reservation_datetime = datetime.combine(self.reservation_date, self.reservation_time)
+        
+        # Make it timezone-aware if needed
+        if timezone.is_naive(reservation_datetime):
+            reservation_datetime = timezone.make_aware(reservation_datetime)
+            
         return timezone.now() > reservation_datetime

@@ -111,7 +111,6 @@
 #                 'name': obj.menu_item_category
 #             }
 #         }
-
 from rest_framework import serializers
 from .models import Order, OrderItem
 from menu.serializers import MenuItemSerializer
@@ -132,8 +131,18 @@ class OrderItemSerializer(serializers.ModelSerializer):
         read_only_fields = ['id', 'created_at', 'cached_item_name', 'cached_item_category']
     
     def get_menu_item_details(self, obj):
-        """Get detailed menu item information"""
-        return MenuItemSerializer(obj.menu_item).data
+        """Get detailed menu item information with absolute image URL"""
+        if obj.menu_item:
+            # Use MenuItemSerializer to get full details including proper image URL
+            from menu.serializers import MenuItemSerializer
+            return MenuItemSerializer(obj.menu_item, context=self.context).data
+        
+        # Fallback for cached data
+        return {
+            'name': obj.cached_item_name,
+            'category': {'name': obj.cached_item_category},
+            'image': None
+        }
 
 class OrderListSerializer(serializers.ModelSerializer):
     items_count = serializers.SerializerMethodField()
@@ -151,9 +160,9 @@ class OrderListSerializer(serializers.ModelSerializer):
         return obj.items.count()
     
     def get_order_items_preview(self, obj):
-        """Get first few items for the list view"""
+        """Get first few items for the list view with proper image URLs"""
         items = obj.items.all()[:3]
-        return OrderItemSerializer(items, many=True).data
+        return OrderItemSerializer(items, many=True, context=self.context).data
 
 class OrderDetailSerializer(serializers.ModelSerializer):
     items = OrderItemSerializer(many=True, read_only=True)
@@ -215,11 +224,21 @@ class OrderItemDetailSerializer(serializers.ModelSerializer):
     
     def get_order_info(self, obj):
         return {
-            'id': obj.order.id.hex[:8],
-            'customer_name': obj.order.customer_name,
-            'total_amount': obj.order.total_amount,
-            'status': obj.order.status
+            'id': obj.order.id.hex[:8] if obj.order else None,
+            'customer_name': obj.order.customer_name if obj.order else 'Unknown',
+            'total_amount': float(obj.order.total_amount) if obj.order and obj.order.total_amount else 0.0,
+            'status': obj.order.status if obj.order else 'unknown'
         }
     
     def get_menu_item_details(self, obj):
-        return MenuItemSerializer(obj.menu_item).data
+        if obj.menu_item:
+            # Use MenuItemSerializer to get full details including proper image URL
+            from menu.serializers import MenuItemSerializer
+            return MenuItemSerializer(obj.menu_item, context=self.context).data
+        
+        # Fallback for cached data
+        return {
+            'name': obj.cached_item_name,
+            'category': {'name': obj.cached_item_category},
+            'image': None
+        }

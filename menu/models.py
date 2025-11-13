@@ -4,9 +4,16 @@ class MenuCategory(models.Model):
     id = models.CharField(max_length=50, primary_key=True)
     name = models.CharField(max_length=100)
     description = models.TextField()
+    created_at = models.DateTimeField(auto_now_add=True)  # Add this if missing
+    updated_at = models.DateTimeField(auto_now=True)      # Add this if missing
 
     def __str__(self):
         return self.name
+
+    # REMOVE the item_count property - we'll use annotation instead
+    # @property
+    # def item_count(self):
+    #     return self.items.count()
 
 class ExtraTopping(models.Model):
     name = models.CharField(max_length=100)

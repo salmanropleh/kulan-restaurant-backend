@@ -1,4 +1,5 @@
-from rest_framework import viewsets, status
+# reservations/views.py
+from rest_framework import viewsets, status, permissions
 from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
@@ -15,6 +16,9 @@ class ReservationViewSet(viewsets.ModelViewSet):
     search_fields = ['customer_name', 'customer_email', 'customer_phone', 'special_requests']
     ordering_fields = ['reservation_date', 'reservation_time', 'created_at']
     ordering = ['-reservation_date', '-reservation_time']
+    
+    # Allow public access to ALL reservation operations
+    permission_classes = [permissions.AllowAny]
     
     def create(self, request, *args, **kwargs):
         """Create a new reservation (default status: pending)"""
@@ -128,6 +132,9 @@ from django.db.models import Count, Q
 from django.utils import timezone
 
 class ReservationStatsView(APIView):
+    # Allow public access to stats as well (or keep admin-only if preferred)
+    permission_classes = [permissions.AllowAny]
+    
     def get(self, request):
         today = timezone.now().date()
         

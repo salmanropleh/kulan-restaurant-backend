@@ -23,7 +23,14 @@ class MenuItemSerializer(serializers.ModelSerializer):
 
 class MenuCategorySerializer(serializers.ModelSerializer):
     items = MenuItemSerializer(many=True, read_only=True)
+    item_count = serializers.SerializerMethodField()  # Change to SerializerMethodField
 
     class Meta:
         model = MenuCategory
-        fields = ['id', 'name', 'description', 'items']
+        fields = ['id', 'name', 'description', 'items', 'item_count', 'created_at', 'updated_at']
+
+    def get_item_count(self, obj):
+        # This will use the annotated item_count if available, otherwise count manually
+        if hasattr(obj, 'item_count'):
+            return obj.item_count
+        return obj.items.count()

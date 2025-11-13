@@ -170,11 +170,19 @@ class OrderViewSet(viewsets.ModelViewSet):
             return OrderDetailSerializer
         return OrderListSerializer
     
+    def get_serializer_context(self):
+        """Pass request context to serializer for absolute URL generation"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+    
     def get_queryset(self):
         queryset = super().get_queryset()
         
+        # Remove the slice - let pagination handle limiting
         if self.action == 'list':
-            queryset = queryset.prefetch_related('items__menu_item')[:10]
+            queryset = queryset.prefetch_related('items__menu_item')
+            # If you need to limit results, use pagination instead of slicing
         
         return queryset
     
@@ -233,6 +241,12 @@ class OrderItemViewSet(viewsets.ModelViewSet):
     ordering_fields = ['created_at', 'price_at_time', 'quantity']
     ordering = ['-created_at']
     
+    def get_serializer_context(self):
+        """Pass request context to serializer for absolute URL generation"""
+        context = super().get_serializer_context()
+        context['request'] = self.request
+        return context
+    
     def get_queryset(self):
         queryset = super().get_queryset()
         
@@ -264,6 +278,12 @@ class OrderItemViewSet(viewsets.ModelViewSet):
         grouped_data = []
         for order in orders:
             if order.items.exists():
+                # Pass request context to serializer
+                serializer = OrderItemSerializer(
+                    order.items.all(), 
+                    many=True, 
+                    context={'request': request}
+                )
                 grouped_data.append({
                     'order': {
                         'id': order.id.hex[:8],
@@ -271,7 +291,7 @@ class OrderItemViewSet(viewsets.ModelViewSet):
                         'total_amount': order.total_amount,
                         'status': order.status
                     },
-                    'items': OrderItemSerializer(order.items.all(), many=True).data
+                    'items': serializer.data
                 })
         
         return Response(grouped_data)
