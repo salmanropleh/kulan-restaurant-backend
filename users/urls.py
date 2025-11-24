@@ -6,4 +6,8 @@ urlpatterns = [
     path('login/', views.login_view, name='login'),
     path('profile/', views.UserProfileView.as_view(), name='profile'),
     path('check-auth/', views.check_auth, name='check-auth'),
+    
+    # Admin URLs
+    path('admin/users/', views.UserAdminListView.as_view(), name='admin-user-list'),
+    path('admin/users/<int:pk>/', views.UserAdminDetailView.as_view(), name='admin-user-detail'),
 ]

@@ -8,11 +8,13 @@ class CustomUser(AbstractUser):
     # Keep both username and email, but make email unique
     email = models.EmailField(unique=True)
     
-    # USERNAME_FIELD remains 'username' (default)
-    # But we can use email for authentication if needed
-    
     def __str__(self):
         return self.email if self.email else self.username
+
+    @property
+    def full_name(self):
+        """Return full name for frontend compatibility"""
+        return f"{self.first_name} {self.last_name}".strip()
 
     class Meta:
         db_table = 'custom_user'

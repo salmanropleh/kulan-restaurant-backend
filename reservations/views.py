@@ -4,6 +4,9 @@ from rest_framework.decorators import action
 from rest_framework.response import Response
 from django_filters.rest_framework import DjangoFilterBackend
 from rest_framework.filters import SearchFilter, OrderingFilter
+from django.db.models import Q, Count
+from django.utils import timezone
+from rest_framework.views import APIView
 from .models import Reservation
 from .serializers import ReservationSerializer
 from .filters import ReservationFilter
@@ -17,8 +20,21 @@ class ReservationViewSet(viewsets.ModelViewSet):
     ordering_fields = ['reservation_date', 'reservation_time', 'created_at']
     ordering = ['-reservation_date', '-reservation_time']
     
-    # Allow public access to ALL reservation operations
+    # CHANGE BACK TO AllowAny (like your orders view)
     permission_classes = [permissions.AllowAny]
+    
+    def get_queryset(self):
+        """Show ALL reservations to everyone (like your orders view)"""
+        queryset = super().get_queryset()
+        return queryset
+    
+    def perform_create(self, serializer):
+        """Automatically assign the current user's email to new reservations if logged in"""
+        if self.request.user.is_authenticated:
+            # Update customer_email to match logged-in user's email
+            serializer.save(customer_email=self.request.user.email)
+        else:
+            serializer.save()
     
     def create(self, request, *args, **kwargs):
         """Create a new reservation (default status: pending)"""
@@ -27,9 +43,6 @@ class ReservationViewSet(viewsets.ModelViewSet):
         
         # Set status to pending for new reservations
         reservation = serializer.save(status='pending')
-        
-        # In a real application, you would send confirmation email here
-        # send_reservation_confirmation_email(reservation)
         
         headers = self.get_success_headers(serializer.data)
         return Response(
@@ -50,9 +63,6 @@ class ReservationViewSet(viewsets.ModelViewSet):
         
         reservation.status = 'confirmed'
         reservation.save()
-        
-        # In a real application, send confirmation notification
-        # send_reservation_confirmed_email(reservation)
         
         serializer = self.get_serializer(reservation)
         return Response(serializer.data)
@@ -76,9 +86,6 @@ class ReservationViewSet(viewsets.ModelViewSet):
     @action(detail=False, methods=['get'])
     def upcoming(self, request):
         """Get upcoming reservations"""
-        from django.utils import timezone
-        from django.db.models import Q
-        
         upcoming_reservations = self.get_queryset().filter(
             Q(reservation_date__gt=timezone.now().date()) |
             Q(reservation_date=timezone.now().date(), 
@@ -91,6 +98,26 @@ class ReservationViewSet(viewsets.ModelViewSet):
             return self.get_paginated_response(serializer.data)
         
         serializer = self.get_serializer(upcoming_reservations, many=True)
+        return Response(serializer.data)
+    
+    # ADD THIS ACTION: Get current user's reservations specifically
+    @action(detail=False, methods=['get'])
+    def my_reservations(self, request):
+        """Alternative endpoint specifically for user's reservations"""
+        if request.user.is_authenticated:
+            # Filter by user email for authenticated users
+            reservations = Reservation.objects.filter(customer_email=request.user.email)
+        else:
+            # Return empty for unauthenticated users
+            reservations = Reservation.objects.none()
+            
+        page = self.paginate_queryset(reservations)
+        
+        if page is not None:
+            serializer = self.get_serializer(page, many=True)
+            return self.get_paginated_response(serializer.data)
+        
+        serializer = self.get_serializer(reservations, many=True)
         return Response(serializer.data)
     
     @action(detail=False, methods=['get'])
@@ -126,28 +153,27 @@ class ReservationViewSet(viewsets.ModelViewSet):
             'existing_reservations': existing_reservations.count()
         })
 
-# Additional view for dashboard statistics
-from rest_framework.views import APIView
-from django.db.models import Count, Q
-from django.utils import timezone
-
+# Update the stats view to show all data
 class ReservationStatsView(APIView):
-    # Allow public access to stats as well (or keep admin-only if preferred)
+    # CHANGE BACK TO AllowAny
     permission_classes = [permissions.AllowAny]
     
     def get(self, request):
         today = timezone.now().date()
         
+        # Show all reservations (like your orders stats)
+        all_reservations = Reservation.objects.all()
+        
         stats = {
-            'total_reservations': Reservation.objects.count(),
-            'today_reservations': Reservation.objects.filter(reservation_date=today).count(),
-            'pending_reservations': Reservation.objects.filter(status='pending').count(),
-            'upcoming_reservations': Reservation.objects.filter(
+            'total_reservations': all_reservations.count(),
+            'today_reservations': all_reservations.filter(reservation_date=today).count(),
+            'pending_reservations': all_reservations.filter(status='pending').count(),
+            'upcoming_reservations': all_reservations.filter(
                 Q(reservation_date__gt=today) |
                 Q(reservation_date=today, reservation_time__gte=timezone.now().time()),
                 status__in=['pending', 'confirmed']
             ).count(),
-            'status_distribution': Reservation.objects.values('status').annotate(
+            'status_distribution': all_reservations.values('status').annotate(
                 count=Count('id')
             )
         }

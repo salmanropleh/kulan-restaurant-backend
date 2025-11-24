@@ -1,6 +1,6 @@
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
-from rest_framework.permissions import AllowAny
+from rest_framework.permissions import AllowAny, IsAuthenticated
 from rest_framework.response import Response
 from django.utils import timezone
 from datetime import timedelta
@@ -164,9 +164,9 @@ def clear_cart(request):
 
 # ===== CHECKOUT ENDPOINTS =====
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])  # CHANGED: Authentication required
 def create_checkout_session(request):
-    """Create checkout session from cart"""
+    """Create checkout session from cart - REQUIRES AUTHENTICATION"""
     cart = get_or_create_cart(request)
     
     if cart.items.count() == 0:
@@ -202,9 +202,9 @@ def create_checkout_session(request):
     return Response(session_serializer.data)
 
 @api_view(['POST'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])  # CHANGED: Authentication required
 def process_order(request):
-    """Process order from checkout session - FIXED to use correct Order model structure"""
+    """Process order from checkout session - REQUIRES AUTHENTICATION"""
     try:
         cart = get_or_create_cart(request)
         checkout_session = CheckoutSession.objects.get(cart=cart)
@@ -216,8 +216,10 @@ def process_order(request):
             # Create order using the CORRECT model structure from orders app
             customer_data = checkout_session.customer_data
             
-            # Combine first and last name for customer_name field
-            customer_name = f"{customer_data['first_name']} {customer_data['last_name']}"
+            # Use authenticated user's information instead of form data
+            customer_name = f"{request.user.first_name} {request.user.last_name}".strip()
+            if not customer_name:
+                customer_name = request.user.username
             
             # Build delivery address
             delivery_address = ""
@@ -232,14 +234,14 @@ def process_order(request):
                 delivery_address = ', '.join(address_parts)
             
             order = Order.objects.create(
-                # Use the correct field names from your orders.Order model
+                # Use authenticated user's information
                 customer_name=customer_name,
-                customer_email=customer_data['email'],
+                customer_email=request.user.email,  # Use authenticated user's email
                 customer_phone=customer_data['phone'],
                 delivery_address=delivery_address,
-                order_type=customer_data['delivery_type'],  # 'delivery' or 'pickup'
-                status='pending',  # Use the correct status choices from orders app
-                total_amount=0  # Will be calculated from order items
+                order_type=customer_data['delivery_type'],
+                status='pending',
+                total_amount=0
             )
             
             # Create order items using the CORRECT model structure
@@ -280,11 +282,16 @@ def process_order(request):
 
 # ===== ORDER CONFIRMATION ENDPOINTS =====
 @api_view(['GET'])
-@permission_classes([AllowAny])
+@permission_classes([IsAuthenticated])  # CHANGED: Authentication required
 def get_order_confirmation(request, order_id):
-    """Get order details for confirmation page"""
+    """Get order details for confirmation page - REQUIRES AUTHENTICATION"""
     try:
         order = Order.objects.get(id=order_id)
+        
+        # Ensure user can only see their own orders
+        if order.customer_email != request.user.email:
+            return Response({'error': 'Order not found'}, status=status.HTTP_404_NOT_FOUND)
+            
         from orders.serializers import OrderDetailSerializer
         serializer = OrderDetailSerializer(order)
         return Response(serializer.data)

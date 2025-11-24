@@ -28,13 +28,18 @@ INSTALLED_APPS = [
     'django_filters',
     
    # Local apps
-'users',
-'menu',
-'orders',
-'orderprocess',  # ADD THIS LINE
-'reservations',
-'contact',
-'analytics',
+    'users',
+    'menu',
+    'orders',
+    'orderprocess',
+    'reservations',
+    'contact',
+    'analytics',
+    'password_reset',
+    'favorites',
+    'testimonials',
+    'gallery',
+
 ]
 
 MIDDLEWARE = [
@@ -92,11 +97,11 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Internationalization
+# Internationalization - FIXED: Removed duplicate USE_TZ and problematic USE_I18N
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Africa/Nairobi'
-USE_TZ = True
-USE_I18N = True
+USE_I18N = False  # Disabled to fix admin interface text corruption
+USE_L10N = False  # Disabled to fix admin interface text corruption
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
@@ -138,9 +143,16 @@ CORS_ALLOWED_ORIGINS = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
     "http://localhost:5173",
+    "http://127.0.0.1:5173",
 ]
 
 CORS_ALLOW_CREDENTIALS = True
 
 # Custom user model
 AUTH_USER_MODEL = 'users.CustomUser'
+
+# Email Configuration (for development)
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'  # For development - emails print to console
+
+# Frontend URL for password reset links
+FRONTEND_URL = 'http://localhost:5173'
