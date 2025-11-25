@@ -8,9 +8,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 
 # Quick-start development settings - unsuitable for production
 SECRET_KEY = config('SECRET_KEY', default='django-insecure-your-secret-key-here-change-in-production')
-DEBUG = config('DEBUG', default=True, cast=bool)
+DEBUG = config('DEBUG', default=False, cast=bool)  # FALSE for production
 
-ALLOWED_HOSTS = ['localhost', '127.0.0.1', '0.0.0.0']
+# Update ALLOWED_HOSTS for production
+ALLOWED_HOSTS = config('ALLOWED_HOSTS', default='localhost,127.0.0.1,.onrender.com').split(',')
 
 # Application definition
 INSTALLED_APPS = [
@@ -39,12 +40,12 @@ INSTALLED_APPS = [
     'favorites',
     'testimonials',
     'gallery',
-
 ]
 
 MIDDLEWARE = [
     'corsheaders.middleware.CorsMiddleware',
     'django.middleware.security.SecurityMiddleware',
+    'whitenoise.middleware.WhiteNoiseMiddleware',  # Added for static files
     'django.contrib.sessions.middleware.SessionMiddleware',
     'django.middleware.common.CommonMiddleware',
     'django.middleware.csrf.CsrfViewMiddleware',
@@ -97,7 +98,7 @@ AUTH_PASSWORD_VALIDATORS = [
     },
 ]
 
-# Internationalization - FIXED: Removed duplicate USE_TZ and problematic USE_I18N
+# Internationalization
 LANGUAGE_CODE = 'en-us'
 TIME_ZONE = 'Africa/Nairobi'
 USE_I18N = False  # Disabled to fix admin interface text corruption
@@ -105,8 +106,10 @@ USE_L10N = False  # Disabled to fix admin interface text corruption
 USE_TZ = True
 
 # Static files (CSS, JavaScript, Images)
-STATIC_URL = 'static/'
-STATIC_ROOT = BASE_DIR / 'staticfiles'
+STATIC_URL = '/static/'
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+STATICFILES_STORAGE = 'whitenoise.storage.CompressedManifestStaticFilesStorage'
+
 MEDIA_URL = '/media/'
 MEDIA_ROOT = BASE_DIR / 'media'
 
