@@ -5,3 +5,7 @@ django-filter
 Pillow
 python-decouple
 djangorestframework-simplejwt
+gunicorn
+whitenoise
+dj-database-url
+psycopg2-binary
