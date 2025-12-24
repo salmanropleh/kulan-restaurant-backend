@@ -1,0 +1,19 @@
+services:
+  - type: web
+    name: kulan-restaurant-backend
+    env: python
+    buildCommand: pip install -r requirements.txt
+    startCommand: gunicorn kulan_backend.wsgi:application
+    envVars:
+      - key: DATABASE_URL
+        sync: false # CRITICAL: This prevents password from being in file
+      - key: DJANGO_SETTINGS_MODULE
+        value: kulan_backend.settings
+      - key: DEBUG
+        value: False
+      - key: ALLOWED_HOSTS
+        value: .onrender.com
+      - key: SECRET_KEY
+        generateValue: true
+      - key: FRONTEND_URL
+        value: https://kulan-restaurant-front-end.vercel.app
